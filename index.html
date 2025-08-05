@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload & Rename Gambar</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f0f0;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .drop-area {
+      border: 2px dashed #aaa;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .drop-area:hover {
+      background-color: #e0f7fa;
+    }
+
+    .preview {
+      text-align: center;
+    }
+
+    .preview img {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 10px;
+      object-fit: contain;
+      margin-top: -10px;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rename-control, .resolution-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rename-control input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    .rename-control select,
+    .resolution-control select {
+      width: 100px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .download-button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .download-button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 500px) {
+      .rename-control,
+      .resolution-control {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .rename-control select,
+      .resolution-control select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="drop-area" id="drop-area">
+    Tarik & letakkan gambar di sini atau klik untuk tempel dari clipboard
+  </div>
+
+  <div class="preview" id="preview"></div>
+
+  <div class="controls">
+    <div class="switch">
+      <label for="manualRename">Ganti Nama Manual:</label>
+      <input type="checkbox" id="manualRename">
+    </div>
+
+    <div class="rename-control">
+      <input type="text" id="filename" placeholder="Masukkan nama file" disabled>
+      <select id="extension">
+        <option value="png">.png</option>
+        <option value="jpg">.jpg</option>
+      </select>
+    </div>
+
+    <div class="resolution-control">
+      <label for="resolution">Resolusi:</label>
+      <select id="resolution">
+        <option value="1">Best</option>
+        <option value="0.5">Medium</option>
+        <option value="0.25">Low</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="download-button" id="downloadBtn" disabled>Download Gambar</button>
+</div>
+
+<script>
+  const dropArea = document.getElementById('drop-area');
+  const manualRename = document.getElementById('manualRename');
+  const filenameInput = document.getElementById('filename');
+  const extensionSelect = document.getElementById('extension');
+  const resolutionSelect = document.getElementById('resolution');
+  const preview = document.getElementById('preview');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  let currentImageBlob = null;
+
+  manualRename.addEventListener('change', () => {
+    filenameInput.disabled = !manualRename.checked;
+  });
+
+  function showPreview(blob) {
+    const url = URL.createObjectURL(blob);
+    preview.innerHTML = `<img src="${url}" alt="preview">`;
+  }
+
+  async function processImage(fileOrBlob) {
+    const ext = extensionSelect.value;
+    const scale = parseFloat(resolutionSelect.value);
+    const filename = manualRename.checked && filenameInput.value.trim()
+      ? filenameInput.value.trim()
+      : `image_${Date.now()}`;
+
+    const img = new Image();
+    img.src = URL.createObjectURL(fileOrBlob);
+    await img.decode();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      currentImageBlob = blob;
+      showPreview(blob);
+      downloadBtn.disabled = false;
+    }, `image/${ext}`, ext === 'jpg' ? 0.8 : 1);
+  }
+
+  function handleFileInput(file) {
+    if (file && file.type.startsWith('image/')) {
+      processImage(file);
+    } else {
+      alert("Silakan pilih file gambar yang valid.");
+    }
+  }
+
+  dropArea.addEventListener('click', async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const type of item.types) {
+          if (type.startsWith("image/")) {
+            const blob = await item.getType(type);
+            handleFileInput(blob);
+            return;
+          }
+        }
+      }
+      alert("Tidak ada gambar di clipboard.");
+    } catch (e) {
+      alert("Gagal mengakses clipboard: " + e.message);
+    }
+  });
+
+  dropArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropArea.style.background = '#e0f7fa';
+  });
+
+  dropArea.addEventListener('dragleave', () => {
+    dropArea.style.background = '';
+  });
+
+  dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dropArea.style.background = '';
+    const file = e.dataTransfer.files[0];
+    handleFileInput(file);
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const ext = extensionSelect.value;
+    const filename = manualRename.checked && filenameInput.value.trim()
+      ? filenameInput.value.trim()
+      : `image_${Date.now()}`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(currentImageBlob);
+    link.download = `${filename}.${ext}`;
+    link.click();
+  });
+</script>
+
+</body>
+  </html>
