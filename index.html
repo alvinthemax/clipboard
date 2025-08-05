@@ -1,36 +1,47 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Upload & Rename Gambar</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upload & Deteksi Konten</title>
   <style>
     * {
       box-sizing: border-box;
       font-family: Arial, sans-serif;
     }
 
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       background: #f0f0f0;
     }
 
     .container {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .box {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
       width: 90%;
       max-width: 600px;
-      background: white;
-      padding: 20px;
-      border-radius: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      display: none;
     }
 
     .drop-area {
@@ -46,31 +57,21 @@
       background-color: #e0f7fa;
     }
 
-    .preview {
-      text-align: center;
-    }
-
-    .preview img {
-      max-width: 100px;
-      max-height: 100px;
-      border-radius: 10px;
-      object-fit: contain;
-      margin-top: -10px;
-    }
-
     .controls {
-      display: flex;
+      display: none;
       flex-direction: column;
       gap: 15px;
+      margin-top: 20px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
     }
 
-    .switch {
+    .controls.visible {
       display: flex;
-      align-items: center;
-      gap: 10px;
+      opacity: 1;
     }
 
-    .rename-control, .resolution-control {
+    .switch, .rename-control, .resolution-control {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -91,6 +92,23 @@
       border: 1px solid #ccc;
     }
 
+    .preview-img img {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+
+    .preview-text {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
     .download-button {
       background-color: #007bff;
       color: white;
@@ -107,8 +125,7 @@
     }
 
     @media (max-width: 500px) {
-      .rename-control,
-      .resolution-control {
+      .rename-control, .resolution-control {
         flex-direction: column;
         align-items: stretch;
       }
@@ -121,138 +138,183 @@
   </style>
 </head>
 <body>
-
 <div class="container">
-  <div class="drop-area" id="drop-area">
-    Tarik & letakkan gambar di sini atau klik untuk tempel dari clipboard
+  <div class="box">
+    <div class="back-button" id="backBtn">←</div>
+
+    <div class="drop-area" id="dropArea">
+      Klik atau tarik file ke sini (gambar atau teks)
+    </div>
+
+    <!-- Gambar Controls -->
+    <div class="controls" id="imageControls">
+      <div class="preview-img" id="imgPreview"></div>
+      <div class="switch">
+        <label for="imgManualRename">Ganti Nama Manual:</label>
+        <input type="checkbox" id="imgManualRename">
+      </div>
+      <div class="rename-control">
+        <input type="text" id="imgFilename" placeholder="Nama file gambar" disabled />
+        <select id="imgExtension">
+          <option value="png">.png</option>
+          <option value="jpg">.jpg</option>
+        </select>
+      </div>
+      <div class="resolution-control">
+        <label for="imgResolution">Resolusi:</label>
+        <select id="imgResolution">
+          <option value="1">Best</option>
+          <option value="0.5">Medium</option>
+          <option value="0.25">Low</option>
+        </select>
+      </div>
+      <button class="download-button" id="downloadImage">Download Gambar</button>
+    </div>
+
+    <!-- Teks Controls -->
+    <div class="controls" id="textControls">
+      <div class="preview-text" id="textPreview"></div>
+      <div class="switch">
+        <label for="textManualRename">Ganti Nama Manual:</label>
+        <input type="checkbox" id="textManualRename">
+      </div>
+      <div class="rename-control">
+        <input type="text" id="textFilename" placeholder="Nama file teks" disabled />
+        <select id="textExtension">
+          <option value="txt">.txt</option>
+        </select>
+      </div>
+      <button class="download-button" id="downloadText">Download Teks</button>
+    </div>
   </div>
-
-  <div class="preview" id="preview"></div>
-
-  <div class="controls">
-    <div class="switch">
-      <label for="manualRename">Ganti Nama Manual:</label>
-      <input type="checkbox" id="manualRename">
-    </div>
-
-    <div class="rename-control">
-      <input type="text" id="filename" placeholder="Masukkan nama file" disabled>
-      <select id="extension">
-        <option value="png">.png</option>
-        <option value="jpg">.jpg</option>
-      </select>
-    </div>
-
-    <div class="resolution-control">
-      <label for="resolution">Resolusi:</label>
-      <select id="resolution">
-        <option value="1">Best</option>
-        <option value="0.5">Medium</option>
-        <option value="0.25">Low</option>
-      </select>
-    </div>
-  </div>
-
-  <button class="download-button" id="downloadBtn" disabled>Download Gambar</button>
 </div>
 
 <script>
-  const dropArea = document.getElementById('drop-area');
-  const manualRename = document.getElementById('manualRename');
-  const filenameInput = document.getElementById('filename');
-  const extensionSelect = document.getElementById('extension');
-  const resolutionSelect = document.getElementById('resolution');
-  const preview = document.getElementById('preview');
-  const downloadBtn = document.getElementById('downloadBtn');
+  const dropArea = document.getElementById("dropArea");
+  const backBtn = document.getElementById("backBtn");
 
-  let currentImageBlob = null;
+  const imageControls = document.getElementById("imageControls");
+  const imgManualRename = document.getElementById("imgManualRename");
+  const imgFilename = document.getElementById("imgFilename");
+  const imgExtension = document.getElementById("imgExtension");
+  const imgResolution = document.getElementById("imgResolution");
+  const imgPreview = document.getElementById("imgPreview");
+  const downloadImage = document.getElementById("downloadImage");
 
-  manualRename.addEventListener('change', () => {
-    filenameInput.disabled = !manualRename.checked;
+  const textControls = document.getElementById("textControls");
+  const textManualRename = document.getElementById("textManualRename");
+  const textFilename = document.getElementById("textFilename");
+  const textExtension = document.getElementById("textExtension");
+  const textPreview = document.getElementById("textPreview");
+  const downloadText = document.getElementById("downloadText");
+
+  let currentBlob = null;
+
+  imgManualRename.addEventListener("change", () => {
+    imgFilename.disabled = !imgManualRename.checked;
   });
 
-  function showPreview(blob) {
-    const url = URL.createObjectURL(blob);
-    preview.innerHTML = `<img src="${url}" alt="preview">`;
+  textManualRename.addEventListener("change", () => {
+    textFilename.disabled = !textManualRename.checked;
+  });
+
+  function resetUI() {
+    dropArea.style.display = "block";
+    imageControls.classList.remove("visible");
+    textControls.classList.remove("visible");
+    backBtn.style.display = "none";
+    currentBlob = null;
   }
 
-  async function processImage(fileOrBlob) {
-    const ext = extensionSelect.value;
-    const scale = parseFloat(resolutionSelect.value);
-    const filename = manualRename.checked && filenameInput.value.trim()
-      ? filenameInput.value.trim()
+  backBtn.addEventListener("click", resetUI);
+
+  dropArea.addEventListener("click", async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        for (const type of item.types) {
+          const blob = await item.getType(type);
+          handleInput(blob, type);
+          return;
+        }
+      }
+    } catch (e) {
+      alert("Clipboard tidak tersedia atau akses ditolak.");
+    }
+  });
+
+  dropArea.addEventListener("dragover", e => e.preventDefault());
+  dropArea.addEventListener("drop", e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleInput(file, file.type);
+  });
+
+  function handleInput(blob, type) {
+    dropArea.style.display = "none";
+    backBtn.style.display = "block";
+    currentBlob = blob;
+
+    if (type.startsWith("image/")) {
+      showImageControls(blob);
+    } else if (type.startsWith("text/") || type === "text/plain") {
+      showTextControls(blob);
+    } else {
+      alert("Jenis file tidak dikenali.");
+      resetUI();
+    }
+  }
+
+  function showImageControls(blob) {
+    const url = URL.createObjectURL(blob);
+    imgPreview.innerHTML = `<img src="${url}" />`;
+    imageControls.classList.add("visible");
+  }
+
+  function showTextControls(blob) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      textPreview.textContent = reader.result;
+      textControls.classList.add("visible");
+    };
+    reader.readAsText(blob);
+  }
+
+  downloadImage.addEventListener("click", async () => {
+    const ext = imgExtension.value;
+    const scale = parseFloat(imgResolution.value);
+    const filename = imgManualRename.checked && imgFilename.value.trim()
+      ? imgFilename.value.trim()
       : `image_${Date.now()}`;
 
     const img = new Image();
-    img.src = URL.createObjectURL(fileOrBlob);
+    img.src = URL.createObjectURL(currentBlob);
     await img.decode();
 
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = img.width * scale;
     canvas.height = img.height * scale;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(blob => {
-      currentImageBlob = blob;
-      showPreview(blob);
-      downloadBtn.disabled = false;
-    }, `image/${ext}`, ext === 'jpg' ? 0.8 : 1);
-  }
-
-  function handleFileInput(file) {
-    if (file && file.type.startsWith('image/')) {
-      processImage(file);
-    } else {
-      alert("Silakan pilih file gambar yang valid.");
-    }
-  }
-
-  dropArea.addEventListener('click', async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const item of clipboardItems) {
-        for (const type of item.types) {
-          if (type.startsWith("image/")) {
-            const blob = await item.getType(type);
-            handleFileInput(blob);
-            return;
-          }
-        }
-      }
-      alert("Tidak ada gambar di clipboard.");
-    } catch (e) {
-      alert("Gagal mengakses clipboard: " + e.message);
-    }
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.${ext}`;
+      link.click();
+    }, `image/${ext}`, ext === "jpg" ? 0.8 : 1);
   });
 
-  dropArea.addEventListener('dragover', e => {
-    e.preventDefault();
-    dropArea.style.background = '#e0f7fa';
-  });
-
-  dropArea.addEventListener('dragleave', () => {
-    dropArea.style.background = '';
-  });
-
-  dropArea.addEventListener('drop', e => {
-    e.preventDefault();
-    dropArea.style.background = '';
-    const file = e.dataTransfer.files[0];
-    handleFileInput(file);
-  });
-
-  downloadBtn.addEventListener('click', () => {
-    const ext = extensionSelect.value;
-    const filename = manualRename.checked && filenameInput.value.trim()
-      ? filenameInput.value.trim()
-      : `image_${Date.now()}`;
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(currentImageBlob);
-    link.download = `${filename}.${ext}`;
+  downloadText.addEventListener("click", () => {
+    const filename = textManualRename.checked && textFilename.value.trim()
+      ? textFilename.value.trim()
+      : `text_${Date.now()}`;
+    const blob = new Blob([textPreview.textContent], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.txt`;
     link.click();
   });
 </script>
-
 </body>
-  </html>
+</html>
