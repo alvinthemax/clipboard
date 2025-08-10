@@ -5,8 +5,168 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Upload & Deteksi Konten</title>
   <style>
-    /* Your existing CSS unchanged */
-    /* ... */
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #f0f0f0;
+    }
+
+    .container {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .box {
+      background: white;
+      border-radius: 20px;
+      padding: 20px 20px 40px; /* more bottom padding */
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Back button container */
+    .back-button-container {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 20px; /* gap below back button */
+    }
+
+    .back-button {
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+      display: none;
+      padding: 5px 10px;
+      border-radius: 10px;
+      transition: background-color 0.3s;
+    }
+
+    .back-button:hover {
+      background-color: #ddd;
+    }
+
+    .drop-area {
+      border: 2px dashed #aaa;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 30px; /* extra spacing below */
+      outline: none;
+      user-select: text;
+    }
+
+    .drop-area:hover {
+      background-color: #e0f7fa;
+    }
+
+    .controls {
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+      max-width: 560px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      align-items: center;
+    }
+
+    .controls.visible {
+      display: flex;
+      opacity: 1;
+    }
+
+    .preview-img img,
+    .preview-gif img {
+      max-width: 150px;
+      max-height: 150px;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+
+    .preview-text {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+      white-space: pre-wrap;
+      width: 100%;
+    }
+
+    .switch, .rename-control, .resolution-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .rename-control input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    .rename-control select,
+    .resolution-control select {
+      width: 100px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .download-button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .download-button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 500px) {
+      .rename-control, .resolution-control {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .rename-control select,
+      .resolution-control select {
+        width: 100%;
+      }
+      .download-button {
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -17,18 +177,70 @@
       <div class="back-button" id="backBtn">← Kembali</div>
     </div>
 
-    <div class="drop-area" id="dropArea" contenteditable="true" spellcheck="false">
+    <div class="drop-area" id="dropArea" contenteditable="true" spellcheck="false" tabindex="0">
       Klik atau tarik file ke sini (gambar, gif, atau teks)
     </div>
 
-    <!-- Controls unchanged -->
-    <!-- ... -->
+    <!-- Image Controls (png/jpg) -->
+    <div class="controls" id="imageControls">
+      <div class="preview-img" id="imgPreview"></div>
+      <div class="switch">
+        <label for="imgManualRename">Ganti Nama Manual:</label>
+        <input type="checkbox" id="imgManualRename" />
+      </div>
+      <div class="rename-control">
+        <input type="text" id="imgFilename" placeholder="Nama file gambar" disabled />
+        <select id="imgExtension">
+          <option value="png">.png</option>
+          <option value="jpg">.jpg</option>
+        </select>
+      </div>
+      <div class="resolution-control">
+        <label for="imgResolution">Resolusi:</label>
+        <select id="imgResolution">
+          <option value="1">Best</option>
+          <option value="0.5">Medium</option>
+          <option value="0.25">Low</option>
+        </select>
+      </div>
+      <button class="download-button" id="downloadImage">Download Gambar</button>
+    </div>
 
+    <!-- GIF Controls -->
+    <div class="controls" id="gifControls">
+      <div class="preview-gif" id="gifPreview"></div>
+      <div class="switch">
+        <label for="gifManualRename">Ganti Nama Manual:</label>
+        <input type="checkbox" id="gifManualRename" />
+      </div>
+      <div class="rename-control">
+        <input type="text" id="gifFilename" placeholder="Nama file gif" disabled />
+        <select id="gifExtension">
+          <option value="gif">.gif</option>
+        </select>
+      </div>
+      <button class="download-button" id="downloadGif">Download GIF</button>
+    </div>
+
+    <!-- Text Controls -->
+    <div class="controls" id="textControls">
+      <div class="preview-text" id="textPreview"></div>
+      <div class="switch">
+        <label for="textManualRename">Ganti Nama Manual:</label>
+        <input type="checkbox" id="textManualRename" />
+      </div>
+      <div class="rename-control">
+        <input type="text" id="textFilename" placeholder="Nama file teks" disabled />
+        <select id="textExtension">
+          <option value="txt">.txt</option>
+        </select>
+      </div>
+      <button class="download-button" id="downloadText">Download Teks</button>
+    </div>
   </div>
 </div>
 
 <script>
-  // Your existing variables and functions here (unchanged)
   const dropArea = document.getElementById("dropArea");
   const backBtn = document.getElementById("backBtn");
 
@@ -74,6 +286,7 @@
     textControls.classList.remove("visible");
     backBtn.style.display = "none";
     currentBlob = null;
+    dropArea.textContent = "Klik atau tarik file ke sini (gambar, gif, atau teks)";
   }
 
   backBtn.addEventListener("click", resetUI);
@@ -89,133 +302,4 @@
         }
       }
     } catch (e) {
-      alert("Clipboard tidak tersedia atau akses ditolak.");
-    }
-  });
-
-  dropArea.addEventListener("dragover", e => e.preventDefault());
-  dropArea.addEventListener("drop", e => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    handleInput(file, file.type);
-  });
-
-  // NEW: Listen to paste event
-  dropArea.addEventListener("paste", e => {
-    e.preventDefault();
-    const clipboardItems = e.clipboardData.items;
-
-    for (const item of clipboardItems) {
-      if (item.kind === 'file') {
-        const blob = item.getAsFile();
-        if (blob) {
-          handleInput(blob, blob.type);
-          return;
-        }
-      } else if (item.kind === 'string') {
-        item.getAsString(text => {
-          // Create a text blob and pass it to handler
-          const blob = new Blob([text], { type: "text/plain" });
-          handleInput(blob, "text/plain");
-        });
-        return;
-      }
-    }
-    alert("Tidak ada data yang bisa dideteksi dari clipboard.");
-  });
-
-  function handleInput(blob, type) {
-    dropArea.style.display = "none";
-    backBtn.style.display = "block";
-    currentBlob = blob;
-
-    // Clear previous previews
-    imgPreview.innerHTML = "";
-    gifPreview.innerHTML = "";
-    textPreview.textContent = "";
-
-    if (type === "image/gif") {
-      showGifControls(blob);
-    } else if (type.startsWith("image/")) {
-      showImageControls(blob);
-    } else if (type.startsWith("text/") || type === "text/plain") {
-      showTextControls(blob);
-    } else {
-      alert("Jenis file tidak dikenali.");
-      resetUI();
-    }
-  }
-
-  function showImageControls(blob) {
-    const url = URL.createObjectURL(blob);
-    imgPreview.innerHTML = `<img src="${url}" alt="Preview Gambar"/>`;
-    imageControls.classList.add("visible");
-  }
-
-  function showGifControls(blob) {
-    const url = URL.createObjectURL(blob);
-    gifPreview.innerHTML = `<img src="${url}" alt="Preview GIF"/>`;
-    gifControls.classList.add("visible");
-  }
-
-  function showTextControls(blob) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      textPreview.textContent = reader.result;
-      textControls.classList.add("visible");
-    };
-    reader.readAsText(blob);
-  }
-
-  // Download PNG/JPG image with scaling
-  downloadImage.addEventListener("click", async () => {
-    const ext = imgExtension.value;
-    const scale = parseFloat(imgResolution.value);
-    const filename = imgManualRename.checked && imgFilename.value.trim()
-      ? imgFilename.value.trim()
-      : `image_${Date.now()}`;
-
-    const img = new Image();
-    img.src = URL.createObjectURL(currentBlob);
-    await img.decode();
-
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(blob => {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${filename}.${ext}`;
-      link.click();
-    }, `image/${ext}`, ext === "jpg" ? 0.8 : 1);
-  });
-
-  // Download GIF as is
-  downloadGif.addEventListener("click", () => {
-    const filename = gifManualRename.checked && gifFilename.value.trim()
-      ? gifFilename.value.trim()
-      : `gif_${Date.now()}`;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(currentBlob);
-    link.download = `${filename}.gif`;
-    link.click();
-  });
-
-  // Download text
-  downloadText.addEventListener("click", () => {
-    const filename = textManualRename.checked && textFilename.value.trim()
-      ? textFilename.value.trim()
-      : `text_${Date.now()}`;
-    const blob = new Blob([textPreview.textContent], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}.txt`;
-    link.click();
-  });
-</script>
-</body>
-</html>
+      alert("Clipboard
