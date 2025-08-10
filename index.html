@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Upload & Deteksi Konten</title>
+  <title>Upload & Deteksi Konten Papan Klip</title>
   <style>
     * {
       box-sizing: border-box;
@@ -28,20 +28,27 @@
     .box {
       background: white;
       border-radius: 20px;
-      padding: 20px;
+      padding: 20px 40px 40px;
       width: 90%;
       max-width: 600px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* New container for back button */
+    .back-container {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 25px; /* added gap from back button to content */
     }
 
     .back-button {
-      position: absolute;
-      top: 15px;
-      left: 20px;
       font-size: 24px;
       cursor: pointer;
-      display: none;
+      user-select: none;
+      /* position removed to be in flow */
     }
 
     .drop-area {
@@ -51,6 +58,7 @@
       text-align: center;
       cursor: pointer;
       transition: background 0.3s;
+      margin-bottom: 25px; /* gap below drop area */
     }
 
     .drop-area:hover {
@@ -60,8 +68,8 @@
     .controls {
       display: none;
       flex-direction: column;
-      gap: 15px;
-      margin-top: 20px;
+      gap: 20px;
+      margin-top: 10px;
       opacity: 0;
       transition: opacity 0.5s ease;
     }
@@ -71,14 +79,51 @@
       opacity: 1;
     }
 
+    /* Center preview horizontally and put on top */
+    .preview-img, .preview-text {
+      margin: 0 auto 20px;
+      max-width: 150px;
+      max-height: 150px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .preview-img img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    .preview-text {
+      background: #f9f9f9;
+      padding: 10px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      max-height: 150px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     .switch, .rename-control, .resolution-control {
       display: flex;
       align-items: center;
       gap: 10px;
+      justify-content: center;
+    }
+
+    .rename-control {
+      margin-top: 10px;
+      justify-content: center;
     }
 
     .rename-control input[type="text"] {
       flex: 1;
+      max-width: 250px;
       padding: 8px 12px;
       border: 1px solid #ccc;
       border-radius: 10px;
@@ -92,23 +137,6 @@
       border: 1px solid #ccc;
     }
 
-    .preview-img img {
-      max-width: 100px;
-      max-height: 100px;
-      border-radius: 10px;
-      object-fit: contain;
-    }
-
-    .preview-text {
-      background: #f9f9f9;
-      padding: 10px;
-      border-radius: 10px;
-      max-height: 150px;
-      overflow-y: auto;
-      font-size: 14px;
-      white-space: pre-wrap;
-    }
-
     .download-button {
       background-color: #007bff;
       color: white;
@@ -118,6 +146,8 @@
       font-size: 16px;
       cursor: pointer;
       transition: background 0.2s;
+      max-width: 150px;
+      align-self: center;
     }
 
     .download-button:hover {
@@ -140,7 +170,10 @@
 <body>
 <div class="container">
   <div class="box">
-    <div class="back-button" id="backBtn">←</div>
+    <!-- Wrapped back button -->
+    <div class="back-container" id="backContainer" style="display:none;">
+      <div class="back-button" id="backBtn">←</div>
+    </div>
 
     <div class="drop-area" id="dropArea">
       Klik atau tarik file ke sini (gambar atau teks)
@@ -158,9 +191,10 @@
         <select id="imgExtension">
           <option value="png">.png</option>
           <option value="jpg">.jpg</option>
+          <option value="gif">.gif</option> <!-- added gif option -->
         </select>
       </div>
-      <div class="resolution-control">
+      <div class="resolution-control" id="resolutionControlWrapper">
         <label for="imgResolution">Resolusi:</label>
         <select id="imgResolution">
           <option value="1">Best</option>
@@ -192,6 +226,7 @@
 <script>
   const dropArea = document.getElementById("dropArea");
   const backBtn = document.getElementById("backBtn");
+  const backContainer = document.getElementById("backContainer");
 
   const imageControls = document.getElementById("imageControls");
   const imgManualRename = document.getElementById("imgManualRename");
@@ -200,6 +235,7 @@
   const imgResolution = document.getElementById("imgResolution");
   const imgPreview = document.getElementById("imgPreview");
   const downloadImage = document.getElementById("downloadImage");
+  const resolutionControlWrapper = document.getElementById("resolutionControlWrapper");
 
   const textControls = document.getElementById("textControls");
   const textManualRename = document.getElementById("textManualRename");
@@ -222,7 +258,7 @@
     dropArea.style.display = "block";
     imageControls.classList.remove("visible");
     textControls.classList.remove("visible");
-    backBtn.style.display = "none";
+    backContainer.style.display = "none";
     currentBlob = null;
   }
 
@@ -252,11 +288,11 @@
 
   function handleInput(blob, type) {
     dropArea.style.display = "none";
-    backBtn.style.display = "block";
+    backContainer.style.display = "flex";
     currentBlob = blob;
 
     if (type.startsWith("image/")) {
-      showImageControls(blob);
+      showImageControls(blob, type);
     } else if (type.startsWith("text/") || type === "text/plain") {
       showTextControls(blob);
     } else {
@@ -265,10 +301,31 @@
     }
   }
 
-  function showImageControls(blob) {
+  function showImageControls(blob, type) {
     const url = URL.createObjectURL(blob);
     imgPreview.innerHTML = `<img src="${url}" />`;
     imageControls.classList.add("visible");
+
+    // Enable/disable resolution options depending on type:
+    if (type === "image/gif") {
+      // GIF does not support canvas scaling easily, disable resolution control
+      imgResolution.disabled = true;
+      resolutionControlWrapper.style.opacity = 0.5;
+    } else {
+      imgResolution.disabled = false;
+      resolutionControlWrapper.style.opacity = 1;
+    }
+
+    // Set extension selector to current type if possible
+    if (type === "image/gif") {
+      imgExtension.value = "gif";
+    } else if (type === "image/jpeg") {
+      imgExtension.value = "jpg";
+    } else if (type === "image/png") {
+      imgExtension.value = "png";
+    } else {
+      imgExtension.value = "png";
+    }
   }
 
   function showTextControls(blob) {
@@ -287,6 +344,15 @@
       ? imgFilename.value.trim()
       : `image_${Date.now()}`;
 
+    // If GIF, just download original blob as is, no scaling or canvas conversion
+    if (ext === "gif" && currentBlob.type === "image/gif") {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(currentBlob);
+      link.download = `${filename}.gif`;
+      link.click();
+      return;
+    }
+
     const img = new Image();
     img.src = URL.createObjectURL(currentBlob);
     await img.decode();
@@ -302,7 +368,7 @@
       link.href = URL.createObjectURL(blob);
       link.download = `${filename}.${ext}`;
       link.click();
-    }, `image/${ext}`, ext === "jpg" ? 0.8 : 1);
+    }, `image/${ext === "jpg" ? "jpeg" : ext}`, ext === "jpg" ? 0.8 : 1);
   });
 
   downloadText.addEventListener("click", () => {
