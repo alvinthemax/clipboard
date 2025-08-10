@@ -28,7 +28,7 @@
     .box {
       background: white;
       border-radius: 20px;
-      padding: 20px 20px 40px; /* more bottom padding */
+      padding: 20px 20px 40px;
       width: 90%;
       max-width: 600px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -38,12 +38,11 @@
       align-items: center;
     }
 
-    /* Back button container */
     .back-button-container {
       width: 100%;
       display: flex;
       justify-content: flex-start;
-      margin-bottom: 20px; /* gap below back button */
+      margin-bottom: 20px;
     }
 
     .back-button {
@@ -69,13 +68,32 @@
       transition: background 0.3s;
       width: 100%;
       max-width: 560px;
-      margin-bottom: 30px; /* extra spacing below */
-      outline: none;
-      user-select: text;
+      margin-bottom: 10px;
     }
 
     .drop-area:hover {
       background-color: #e0f7fa;
+    }
+
+    textarea#pasteArea {
+      width: 100%;
+      max-width: 560px;
+      height: 80px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      resize: none;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+    }
+
+    input#fileInput {
+      margin-top: 10px;
+      max-width: 560px;
+      border-radius: 10px;
+      font-size: 14px;
+      padding: 6px;
     }
 
     .controls {
@@ -87,6 +105,7 @@
       opacity: 0;
       transition: opacity 0.5s ease;
       align-items: center;
+      margin-top: 20px;
     }
 
     .controls.visible {
@@ -177,9 +196,13 @@
       <div class="back-button" id="backBtn">← Kembali</div>
     </div>
 
-    <div class="drop-area" id="dropArea" contenteditable="true" spellcheck="false" tabindex="0">
+    <div class="drop-area" id="dropArea">
       Klik atau tarik file ke sini (gambar, gif, atau teks)
     </div>
+
+    <textarea id="pasteArea" placeholder="Tempel (Ctrl+V) di sini untuk mendeteksi konten..."></textarea>
+
+    <input type="file" id="fileInput" />
 
     <!-- Image Controls (png/jpg) -->
     <div class="controls" id="imageControls">
@@ -266,6 +289,9 @@
   const textPreview = document.getElementById("textPreview");
   const downloadText = document.getElementById("downloadText");
 
+  const pasteArea = document.getElementById("pasteArea");
+  const fileInput = document.getElementById("fileInput");
+
   let currentBlob = null;
 
   // Enable/disable manual rename inputs
@@ -281,12 +307,13 @@
 
   function resetUI() {
     dropArea.style.display = "block";
+    pasteArea.style.display = "block";
+    fileInput.style.display = "block";
     imageControls.classList.remove("visible");
     gifControls.classList.remove("visible");
     textControls.classList.remove("visible");
     backBtn.style.display = "none";
     currentBlob = null;
-    dropArea.textContent = "Klik atau tarik file ke sini (gambar, gif, atau teks)";
   }
 
   backBtn.addEventListener("click", resetUI);
@@ -302,4 +329,163 @@
         }
       }
     } catch (e) {
-      alert("Clipboard
+      alert("Clipboard tidak tersedia atau akses ditolak.");
+    }
+  });
+
+  dropArea.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropArea.style.backgroundColor = "#e0f7fa";
+  });
+  dropArea.addEventListener("dragleave", e => {
+    e.preventDefault();
+    dropArea.style.backgroundColor = "";
+  });
+  dropArea.addEventListener("drop", e => {
+    e.preventDefault();
+    dropArea.style.backgroundColor = "";
+    const file = e.dataTransfer.files[0];
+    handleInput(file, file.type);
+  });
+
+  pasteArea.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const items = e.clipboardData.items;
+    for (const item of items) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        handleInput(file, file.type);
+        pasteArea.value = "";
+        return;
+      } else if (item.kind === "string") {
+        item.getAsString((text) => {
+          handleInput(new Blob([text], {type: "text/plain"}), "text/plain");
+          pasteArea.value = "";
+        });
+        return;
+      }
+    }
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    if (fileInput.files.length > 0) {
+      handleInput(fileInput.files[0], fileInput.files[0].type);
+      fileInput.value = "";
+    }
+  });
+
+  function handleInput(blob, type) {
+    dropArea.style.display = "none";
+    pasteArea.style.display = "none";
+    fileInput.style.display = "none";
+    backBtn.style.display = "block";
+    currentBlob = blob;
+
+    imgPreview.innerHTML = "";
+gifPreview.innerHTML = "";
+textPreview.textContent = "";
+
+if (type.startsWith("image/png") || type.startsWith("image/jpeg")) {
+  // Handle PNG/JPG images
+  const url = URL.createObjectURL(blob);
+  const img = document.createElement("img");
+  img.src = url;
+  img.alt = "Preview gambar";
+  imgPreview.appendChild(img);
+
+  imageControls.classList.add("visible");
+  gifControls.classList.remove("visible");
+  textControls.classList.remove("visible");
+
+  imgManualRename.checked = false;
+  imgFilename.disabled = true;
+  imgFilename.value = "image";
+  imgExtension.value = type.endsWith("png") ? "png" : "jpg";
+  imgResolution.value = "1";
+
+  downloadImage.onclick = () => {
+    downloadImageFile(blob, imgFilename.value.trim() || "image", imgExtension.value, parseFloat(imgResolution.value));
+  };
+
+} else if (type.startsWith("image/gif")) {
+  // Handle GIF images
+  const url = URL.createObjectURL(blob);
+  const img = document.createElement("img");
+  img.src = url;
+  img.alt = "Preview gif";
+  gifPreview.appendChild(img);
+
+  imageControls.classList.remove("visible");
+  gifControls.classList.add("visible");
+  textControls.classList.remove("visible");
+
+  gifManualRename.checked = false;
+  gifFilename.disabled = true;
+  gifFilename.value = "animation";
+  gifExtension.value = "gif";
+
+  downloadGif.onclick = () => {
+    downloadFile(blob, gifFilename.value.trim() || "animation", gifExtension.value);
+  };
+
+} else if (type.startsWith("text/") || type === "application/json" || type === "application/xml" || type === "text/plain") {
+  // Handle text content
+  const reader = new FileReader();
+  reader.onload = () => {
+    textPreview.textContent = reader.result;
+
+    imageControls.classList.remove("visible");
+    gifControls.classList.remove("visible");
+    textControls.classList.add("visible");
+
+    textManualRename.checked = false;
+    textFilename.disabled = true;
+    textFilename.value = "document";
+    textExtension.value = "txt";
+  };
+  reader.readAsText(blob);
+
+  downloadText.onclick = () => {
+    downloadFile(blob, textFilename.value.trim() || "document", textExtension.value);
+  };
+
+} else {
+  alert("Format file tidak didukung.");
+  resetUI();
+}
+
+}
+
+function downloadImageFile(blob, filename, extension, scale) {
+  if (scale === 1) {
+    downloadFile(blob, filename, extension);
+    return;
+  }
+  const img = new Image();
+  const url = URL.createObjectURL(blob);
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((resizedBlob) => {
+      downloadFile(resizedBlob, filename, extension);
+      URL.revokeObjectURL(url);
+    }, "image/" + extension);
+  };
+  img.src = url;
+}
+
+function downloadFile(blob, filename, extension) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename + "." + extension;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+</script>
+</body>
+</html>
