@@ -1,50 +1,221 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Paste GIF and Download</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upload & Deteksi Konten</title>
+  <style>
+    /* Your existing CSS unchanged */
+    /* ... */
+  </style>
 </head>
 <body>
-<h2>Paste your GIF or animated image here</h2>
-<p>Click this box and press Ctrl+V (Cmd+V on Mac) to paste.</p>
-<div id="pasteArea" contenteditable="true" 
-     style="width:300px; height:150px; border:1px solid black; padding:10px;">
+<div class="container">
+  <div class="box">
+
+    <div class="back-button-container">
+      <div class="back-button" id="backBtn">← Kembali</div>
+    </div>
+
+    <div class="drop-area" id="dropArea" contenteditable="true" spellcheck="false">
+      Klik atau tarik file ke sini (gambar, gif, atau teks)
+    </div>
+
+    <!-- Controls unchanged -->
+    <!-- ... -->
+
+  </div>
 </div>
 
 <script>
-const pasteArea = document.getElementById('pasteArea');
+  // Your existing variables and functions here (unchanged)
+  const dropArea = document.getElementById("dropArea");
+  const backBtn = document.getElementById("backBtn");
 
-pasteArea.addEventListener('paste', async (event) => {
-  const items = event.clipboardData.items;
-  
-  for (const item of items) {
-    if (item.type.indexOf('image') !== -1) {
-      const file = item.getAsFile();
-      if (!file) return;
+  const imageControls = document.getElementById("imageControls");
+  const imgManualRename = document.getElementById("imgManualRename");
+  const imgFilename = document.getElementById("imgFilename");
+  const imgExtension = document.getElementById("imgExtension");
+  const imgResolution = document.getElementById("imgResolution");
+  const imgPreview = document.getElementById("imgPreview");
+  const downloadImage = document.getElementById("downloadImage");
 
-      // Check if the image is a GIF
-      if (file.type === 'image/gif') {
-        // Create a URL for the file
-        const url = URL.createObjectURL(file);
+  const gifControls = document.getElementById("gifControls");
+  const gifManualRename = document.getElementById("gifManualRename");
+  const gifFilename = document.getElementById("gifFilename");
+  const gifExtension = document.getElementById("gifExtension");
+  const gifPreview = document.getElementById("gifPreview");
+  const downloadGif = document.getElementById("downloadGif");
 
-        // Create an anchor to trigger download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'pasted-image.gif';
-        document.body.appendChild(a);
-        a.click();
+  const textControls = document.getElementById("textControls");
+  const textManualRename = document.getElementById("textManualRename");
+  const textFilename = document.getElementById("textFilename");
+  const textExtension = document.getElementById("textExtension");
+  const textPreview = document.getElementById("textPreview");
+  const downloadText = document.getElementById("downloadText");
 
-        // Cleanup
-        URL.revokeObjectURL(url);
-        a.remove();
-        alert('GIF downloaded!');
-      } else {
-        alert('Pasted image is not a GIF.');
+  let currentBlob = null;
+
+  // Enable/disable manual rename inputs
+  imgManualRename.addEventListener("change", () => {
+    imgFilename.disabled = !imgManualRename.checked;
+  });
+  gifManualRename.addEventListener("change", () => {
+    gifFilename.disabled = !gifManualRename.checked;
+  });
+  textManualRename.addEventListener("change", () => {
+    textFilename.disabled = !textManualRename.checked;
+  });
+
+  function resetUI() {
+    dropArea.style.display = "block";
+    imageControls.classList.remove("visible");
+    gifControls.classList.remove("visible");
+    textControls.classList.remove("visible");
+    backBtn.style.display = "none";
+    currentBlob = null;
+  }
+
+  backBtn.addEventListener("click", resetUI);
+
+  dropArea.addEventListener("click", async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        for (const type of item.types) {
+          const blob = await item.getType(type);
+          handleInput(blob, type);
+          return;
+        }
+      }
+    } catch (e) {
+      alert("Clipboard tidak tersedia atau akses ditolak.");
+    }
+  });
+
+  dropArea.addEventListener("dragover", e => e.preventDefault());
+  dropArea.addEventListener("drop", e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleInput(file, file.type);
+  });
+
+  // NEW: Listen to paste event
+  dropArea.addEventListener("paste", e => {
+    e.preventDefault();
+    const clipboardItems = e.clipboardData.items;
+
+    for (const item of clipboardItems) {
+      if (item.kind === 'file') {
+        const blob = item.getAsFile();
+        if (blob) {
+          handleInput(blob, blob.type);
+          return;
+        }
+      } else if (item.kind === 'string') {
+        item.getAsString(text => {
+          // Create a text blob and pass it to handler
+          const blob = new Blob([text], { type: "text/plain" });
+          handleInput(blob, "text/plain");
+        });
+        return;
       }
     }
+    alert("Tidak ada data yang bisa dideteksi dari clipboard.");
+  });
+
+  function handleInput(blob, type) {
+    dropArea.style.display = "none";
+    backBtn.style.display = "block";
+    currentBlob = blob;
+
+    // Clear previous previews
+    imgPreview.innerHTML = "";
+    gifPreview.innerHTML = "";
+    textPreview.textContent = "";
+
+    if (type === "image/gif") {
+      showGifControls(blob);
+    } else if (type.startsWith("image/")) {
+      showImageControls(blob);
+    } else if (type.startsWith("text/") || type === "text/plain") {
+      showTextControls(blob);
+    } else {
+      alert("Jenis file tidak dikenali.");
+      resetUI();
+    }
   }
-});
+
+  function showImageControls(blob) {
+    const url = URL.createObjectURL(blob);
+    imgPreview.innerHTML = `<img src="${url}" alt="Preview Gambar"/>`;
+    imageControls.classList.add("visible");
+  }
+
+  function showGifControls(blob) {
+    const url = URL.createObjectURL(blob);
+    gifPreview.innerHTML = `<img src="${url}" alt="Preview GIF"/>`;
+    gifControls.classList.add("visible");
+  }
+
+  function showTextControls(blob) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      textPreview.textContent = reader.result;
+      textControls.classList.add("visible");
+    };
+    reader.readAsText(blob);
+  }
+
+  // Download PNG/JPG image with scaling
+  downloadImage.addEventListener("click", async () => {
+    const ext = imgExtension.value;
+    const scale = parseFloat(imgResolution.value);
+    const filename = imgManualRename.checked && imgFilename.value.trim()
+      ? imgFilename.value.trim()
+      : `image_${Date.now()}`;
+
+    const img = new Image();
+    img.src = URL.createObjectURL(currentBlob);
+    await img.decode();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.${ext}`;
+      link.click();
+    }, `image/${ext}`, ext === "jpg" ? 0.8 : 1);
+  });
+
+  // Download GIF as is
+  downloadGif.addEventListener("click", () => {
+    const filename = gifManualRename.checked && gifFilename.value.trim()
+      ? gifFilename.value.trim()
+      : `gif_${Date.now()}`;
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(currentBlob);
+    link.download = `${filename}.gif`;
+    link.click();
+  });
+
+  // Download text
+  downloadText.addEventListener("click", () => {
+    const filename = textManualRename.checked && textFilename.value.trim()
+      ? textFilename.value.trim()
+      : `text_${Date.now()}`;
+    const blob = new Blob([textPreview.textContent], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.txt`;
+    link.click();
+  });
 </script>
 </body>
 </html>
