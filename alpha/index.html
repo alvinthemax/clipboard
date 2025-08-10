@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paste GIF and Download</title>
+</head>
+<body>
+<h2>Paste your GIF or animated image here</h2>
+<p>Click this box and press Ctrl+V (Cmd+V on Mac) to paste.</p>
+<div id="pasteArea" contenteditable="true" 
+     style="width:300px; height:150px; border:1px solid black; padding:10px;">
+</div>
+
+<script>
+const pasteArea = document.getElementById('pasteArea');
+
+pasteArea.addEventListener('paste', async (event) => {
+  const items = event.clipboardData.items;
+  
+  for (const item of items) {
+    if (item.type.indexOf('image') !== -1) {
+      const file = item.getAsFile();
+      if (!file) return;
+
+      // Check if the image is a GIF
+      if (file.type === 'image/gif') {
+        // Create a URL for the file
+        const url = URL.createObjectURL(file);
+
+        // Create an anchor to trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'pasted-image.gif';
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        URL.revokeObjectURL(url);
+        a.remove();
+        alert('GIF downloaded!');
+      } else {
+        alert('Pasted image is not a GIF.');
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
